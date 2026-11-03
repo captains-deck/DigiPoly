@@ -1,3 +1,4 @@
+import {encode} from '../vendor/ghostmarker/codec.mjs';
 import {createTarget,imageBlob} from '../vendor/ghostmarker/browser.mjs';
 import {createWorkspace,environment,addGhostMarker} from '../src/workspace.mjs';
 import {LiveRuntime} from '../live/runtime.mjs';import {sha256} from '../src/cloud.mjs';
@@ -5,7 +6,11 @@ const results=document.getElementById('results'),previews=document.getElementByI
 document.getElementById('run').onclick=async()=>{
  document.getElementById('run').disabled=true;results.textContent='Encoding the example…';runtime?.close();previews.replaceChildren();
  try{
- const target=await createTarget(await(await fetch('/assets/backgrounds/bedroom-stream.png')).blob(),{strength:96,mirror:true,name:'Browser test picture'}),blob=await imageBlob(target),referenceId='ghostref-browser-test',workspace=createWorkspace(),env=environment(workspace);
+ const target=await createTarget(await(await fetch('/assets/backgrounds/bedroom-stream.png')).blob(),{strength:96,mirror:true,name:'Browser test picture'});
+ // Reproducible payloads let the browser check catch identity-dependent failures.
+ const original=await createImageBitmap(await(await fetch(target.original)).blob()),tile=document.createElement('canvas');tile.width=target.width;tile.height=target.height;const ctx=tile.getContext('2d');ctx.drawImage(original,0,0);original.close();
+ const encoded=encode(ctx.getImageData(0,0,tile.width,tile.height).data,tile.width,tile.height,{id:new URL(location.href).searchParams.get('id')||'GM-11223344',strength:target.strength,textured:true});ctx.putImageData(new ImageData(encoded.rgba,tile.width,tile.height),0,0);Object.assign(target,encoded,{image:tile.toDataURL('image/png')});
+ const blob=await imageBlob(target),referenceId='ghostref-browser-test',workspace=createWorkspace(),env=environment(workspace);
  env.scene.layout='placed';env.scene.motion=false;addGhostMarker(workspace,env.id,{...target,label:target.name,kind:'ghost',referenceId});const id=target.id;
  env.channels[0].assignments[id]='uk-runner';env.channels[1].assignments[id]='es-sun';
 

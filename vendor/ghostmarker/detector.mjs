@@ -18,7 +18,7 @@ export class GhostDetector {
     }
   }
   reset(){this.last.clear();this.frameNumber=0;}
-  detect(rgba,width,height){
+  detect(rgba,width,height,{exclude=[]}={}){
     if(!this.targets.length)return [];
     const cv=this.cv,owned=[],keep=x=>(owned.push(x),x);this.frameNumber++;
     try{
@@ -26,8 +26,11 @@ export class GhostDetector {
       // Restrict feature extraction to known picture regions while following all
       // targets. Periodically scan the frame again, and immediately after a loss.
       const local=this.last.size===this.targets.length&&this.frameNumber%15!==0;
-      const mask=keep(local?new cv.Mat(height,width,cv.CV_8UC1,new cv.Scalar(0)):new cv.Mat());
+      const mask=keep(local||exclude.length?new cv.Mat(height,width,cv.CV_8UC1,new cv.Scalar(local?0:255)):new cv.Mat());
       if(local)for(const q of this.last.values()){const xs=q.map(p=>p.x),ys=q.map(p=>p.y),margin=90;cv.rectangle(mask,new cv.Point(Math.max(0,Math.min(...xs)-margin),Math.max(0,Math.min(...ys)-margin)),new cv.Point(Math.min(width-1,Math.max(...xs)+margin),Math.min(height-1,Math.max(...ys)+margin)),new cv.Scalar(255),-1);}
+      // Known coded-marker regions can dominate the feature budget. Exclude
+      // their geometry from localisation only; decoding still reads source pixels.
+      for(const q of exclude){if(q?.length!==4||q.some(p=>!Number.isFinite(p.x+p.y)))continue;const points=keep(cv.matFromArray(4,1,cv.CV_32SC2,q.flatMap(p=>[Math.round(p.x),Math.round(p.y)])));cv.fillConvexPoly(mask,points,new cv.Scalar(0));}
       this.orb.detectAndCompute(gray,mask,keys,desc);const found=[];this.last.clear();
       if(desc.empty())return found;
       for(const t of this.targets){const d=this.locate(t,src,gray,keys,desc,width,height);if(d){this.last.set(t.id,d.corners);found.push({...d,search:local?'local':'full'});}}

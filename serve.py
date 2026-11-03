@@ -8,6 +8,13 @@ from pathlib import Path
 class Handler(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, '.mjs': 'text/javascript'}
 
+    def translate_path(self, path):
+        # Match the extensionless routes used by the hosted portal's links.
+        route, separator, query = path.partition('?')
+        if route.rstrip('/') in {'/studio', '/print', '/output', '/live-setup'}:
+            path = route.rstrip('/') + '.html' + (separator + query if separator else '')
+        return super().translate_path(path)
+
     def end_headers(self):
         self.send_header('Cache-Control', 'no-cache')
         self.send_header('X-Content-Type-Options', 'nosniff')

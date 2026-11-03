@@ -1,6 +1,6 @@
 # GhostMarker image targets
 
-DigiPoly 0.6 supports two experimental GhostMarkers per environment alongside DP-001 and DP-002. A GhostMarker hides an ID in a detailed picture. Its reference picture locates the surface; the hidden ID confirms which campaign placement it represents.
+DigiPoly 0.6 and later support two experimental GhostMarkers per environment alongside DP-001 and DP-002. A GhostMarker hides an ID in a detailed picture. Its reference picture locates the surface; the hidden ID confirms which campaign placement it represents.
 
 ## Create and use a target
 
@@ -42,8 +42,8 @@ Use an updated Studio and Live together. Older clients do not understand GhostMa
 
 ## Development
 
-GhostMarker's independent MIT source lives in the sibling project. Refresh the vendored copy using `npm run ghostmarker:sync`; the snapshot records its version and source hashes. The worker decodes only rectified matched regions, and narrows feature extraction around tracked images between periodic full-frame searches. It always reads the original source frame before overlays.
+GhostMarker's independent MIT source lives in the sibling project. Refresh the vendored copy using `npm run ghostmarker:sync`; the snapshot records its version and source hashes. The worker decodes only rectified matched regions, and narrows feature extraction around tracked images between periodic full-frame searches. Recognised DP-001/DP-002 regions are excluded from picture feature searches so their detailed borders cannot crowd out image matches. The decoder always reads the original source frame before overlays.
 
-Run `npm test` for workspace, cloud, tracking and OBS bridge regressions. With the local Studio server running, open `/tests/ghost-browser.html` and click **Run checks** for the actual worker → LiveRuntime → UK/Spanish compositor test. Test pages are excluded from the website build and desktop package.
+Run `npm test` for workspace, cloud, tracking and OBS bridge regressions. With the local Studio server running, open `/tests/ghost-browser.html` and click **Run checks** for the actual worker → LiveRuntime → UK/Spanish compositor test. Append `?id=GM-AABBCCDD` to repeat with a different reproducible payload. Test pages are excluded from the website build and desktop package.
 
 Research references: [StegaStamp paper](https://openaccess.thecvf.com/content_CVPR_2020/papers/Tancik_StegaStamp_Invisible_Hyperlinks_in_Physical_Photographs_CVPR_2020_paper.pdf), [official StegaStamp code](https://github.com/tancik/StegaStamp), [TrustMark](https://github.com/adobe/trustmark). GhostMarker's `docs/RESEARCH.md` records the codec design, measured synthetic results and a physical validation checklist.

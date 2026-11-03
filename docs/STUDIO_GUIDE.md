@@ -62,3 +62,7 @@ For the desktop route, use Live's **Copy OBS link** instead. That supplies a sta
 ## GhostMarker picture targets (0.6)
 
 Use **Environment markers → + GhostMarker** to create or import an image target. Save to cloud and load it in the updated Live app; reference images travel with the workspace. Existing coded markers and OBS channel links keep working. See the [GhostMarker guide](GHOSTMARKER.md) for printing, tracking states and experimental limitations.
+
+## Updated linked-corner markers (0.7)
+
+The logo and DP-001 now use the interlocking-link artwork. DP-002 shares the central D and turns each inner corner link by 180 degrees to encode its separate ID. Download the updated sheets from **Print markers**. Existing v2 prints retain their original IDs and content assignments. Use one copy of each ID in view, including when mixing old and new print versions. New prints require Studio/Live 0.7 or later; GhostMarker targets are unaffected.

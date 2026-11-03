@@ -1,46 +1,29 @@
-import { markerPixels, MARKERS, CODE_CELLS, CELL_SIZE } from './marker.mjs';
-import { orderCorners } from './geometry.mjs';
-
-export const NORMALIZED_SIZE=96;
-const SIZE=NORMALIZED_SIZE, template=markerPixels(SIZE,'DP-001',{includeCode:false});
-const structureSamples=[];
+import {markerPixels,MARKERS,CODE_CELLS,CELL_SIZE,MARKER_SIZE,CORNERS} from './marker.mjs';
+import {matchLegacyPortal} from './legacy-marker-matcher.mjs';
+import {orderCorners} from './geometry.mjs';
+export const NORMALIZED_SIZE=128;
+const SIZE=NORMALIZED_SIZE,template=markerPixels(SIZE,'DP-001',{includeCode:false}),samples=[];
+// The inner corner links carry identity. Compare the shared silhouette separately
+// so a large central D cannot overpower a wrong or damaged corner code.
 for(let y=3;y<SIZE-3;y++)for(let x=3;x<SIZE-3;x++){
-  const px=(x+.5)*200/SIZE,py=(y+.5)*200/SIZE;
-  if(!CODE_CELLS.some(([cx,cy])=>px>=cx-3&&px<=cx+CELL_SIZE+3&&py>=cy-3&&py<=cy+CELL_SIZE+3))structureSamples.push([x,y,template[y*SIZE+x]>0]);
+  const px=(x+.5)*800/SIZE,py=(y+.5)*800/SIZE;
+  if(!CORNERS.some(([fx,fy])=>{const cx=fx?800-px:px,cy=fy?800-py:py;return cx>=88&&cx<=168&&cy>=88&&cy<=168;}))samples.push([x,y,template[y*SIZE+x]>0]);
 }
-function pixelAt(pixels,x,y,r){
-  let sx=x,sy=y;
-  if(r===1){sx=SIZE-1-y;sy=x;}
-  if(r===2){sx=SIZE-1-x;sy=SIZE-1-y;}
-  if(r===3){sx=y;sy=SIZE-1-x;}
-  return pixels[sy*SIZE+sx];
+function pixelAt(pixels,x,y,r){if(r===1)return pixels[x*SIZE+SIZE-1-y];if(r===2)return pixels[(SIZE-1-y)*SIZE+SIZE-1-x];if(r===3)return pixels[(SIZE-1-x)*SIZE+y];return pixels[y*SIZE+x];}
+function matchLinkedPortal(pixels){
+  const rotations=[];
+  for(let r=0;r<4;r++){let white=0,black=0,whiteHit=0,blackHit=0;for(const [x,y,expected] of samples){const actual=pixelAt(pixels,x,y,r)>127;if(expected){white++;if(actual)whiteHit++;}else{black++;if(!actual)blackHit++;}}rotations.push({rotation:r,score:(whiteHit/white+blackHit/black)/2});}
+  rotations.sort((a,b)=>b.score-a.score);const best=rotations[0];if(best.score<.9||best.score-rotations[1].score<.08)return null;
+  const read=CODE_CELLS.map(([cx,cy])=>{let white=0,total=0;for(let y=Math.ceil(cy*SIZE/MARKER_SIZE);y<Math.floor((cy+CELL_SIZE)*SIZE/MARKER_SIZE);y++)for(let x=Math.ceil(cx*SIZE/MARKER_SIZE);x<Math.floor((cx+CELL_SIZE)*SIZE/MARKER_SIZE);x++){white+=pixelAt(pixels,x,y,best.rotation)>127?1:0;total++;}const level=white/total;return level>=.78?1:level<=.22?0:null;});
+  const uncertain=read.filter(b=>b===null).length;if(uncertain>1)return null;
+  const ranked=MARKERS.map(marker=>({...marker,errors:read.reduce((n,b,i)=>n+(b!==null&&b!==marker.bits[i]?1:0),0)})).sort((a,b)=>a.errors-b.errors);
+  if(ranked[0].errors>1||ranked[1].errors-ranked[0].errors<5)return null;
+  return {...best,id:ranked[0].id,identityConfidence:(8-ranked[0].errors-uncertain)/8,version:3};
 }
 export function matchPortal(pixels){
-  const rotations=[];
-  for(let r=0;r<4;r++){
-    let white=0,black=0,whiteHit=0,blackHit=0;
-    for(const [x,y,expected] of structureSamples){
-      const actual=pixelAt(pixels,x,y,r)>127;
-      if(expected){white++;if(actual)whiteHit++;}else{black++;if(!actual)blackHit++;}
-    }
-    rotations.push({score:(whiteHit/white+blackHit/black)/2,rotation:r});
-  }
-  rotations.sort((a,b)=>b.score-a.score);
-  const best=rotations[0];
-  if(best.score<.87||best.score-rotations[1].score<.08)return null;
-  const read=CODE_CELLS.map(([cx,cy])=>{
-    let white=0,total=0;
-    for(let y=Math.ceil((cy+2)*SIZE/200);y<Math.floor((cy+CELL_SIZE-2)*SIZE/200);y++)
-      for(let x=Math.ceil((cx+2)*SIZE/200);x<Math.floor((cx+CELL_SIZE-2)*SIZE/200);x++){white+=pixelAt(pixels,x,y,best.rotation)>127?1:0;total++;}
-    const level=white/total;return level>.78?1:level<.22?0:null;
-  });
-  const uncertain=read.filter(b=>b===null).length;
-  if(uncertain>1)return null;
-  const ranked=MARKERS.map(marker=>({...marker,errors:read.reduce((n,b,i)=>n+(b!==null&&b!==marker.bits[i]?1:0),0)})).sort((a,b)=>a.errors-b.errors);
-  // The two codewords differ in twelve cells. Reject ambiguous/damaged codes;
-  // do not let the much larger shared D hide a bad identity match.
-  if(ranked[0].errors>1||ranked[1].errors-ranked[0].errors<6)return null;
-  return {...best,id:ranked[0].id,identityConfidence:(16-ranked[0].errors-uncertain)/16};
+  const linked=matchLinkedPortal(pixels),legacy=matchLegacyPortal(pixels);
+  if(linked&&legacy&&linked.id!==legacy.id)return null;
+  return linked||(legacy?{...legacy,version:2}:null);
 }
 function centre(d){return {x:d.corners.reduce((s,p)=>s+p.x,0)/4,y:d.corners.reduce((s,p)=>s+p.y,0)/4};}
 function distinctDetections(candidates){
@@ -97,7 +80,7 @@ export class PortalDetector {
                 const match=matchPortal(normalized.data);
                 if(match){
                   const oriented=corners.map((_,i)=>corners[(i+match.rotation)%4]);
-                  found.push({id:match.id,corners:oriented,confidence:match.score,identityConfidence:match.identityConfidence,area:candidate.area});
+                  found.push({id:match.id,corners:oriented,confidence:match.score,identityConfidence:match.identityConfidence,version:match.version,area:candidate.area});
                 }
               } finally {from.delete();transform.delete();normalized.delete();}
             } finally {contour.delete();approx.delete();}

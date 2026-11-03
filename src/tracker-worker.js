@@ -23,7 +23,8 @@ async function handle(data){
     const start=performance.now(),width=Math.min(ghosts.targets.length?960:800,frame.width),height=Math.round(frame.height*width/frame.width);
     if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
     context.drawImage(frame,0,0,width,height);const pixels=context.getImageData(0,0,width,height).data;
-    const detections=[...detector.detect(pixels,width,height),...ghosts.detect(pixels,width,height)];
+    const coded=detector.detect(pixels,width,height);
+    const detections=[...coded,...ghosts.detect(pixels,width,height,{exclude:coded.map(d=>d.corners)})];
     for(const d of detections)d.corners=d.corners.map(p=>({x:p.x*frame.width/width,y:p.y*frame.height/height}));
     self.postMessage({type:'frame',frame,sequence,detections,ms:performance.now()-start},[frame]);
   }catch(error){frame.close();self.postMessage({type:'error',sequence,message:String(error)});}

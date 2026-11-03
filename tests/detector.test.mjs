@@ -1,17 +1,21 @@
+import {readFileSync} from 'node:fs';
+import {rgbaPng} from './png-fixture.mjs';
+import {markerPixels as legacyPixels} from '../src/marker-v2.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import cvModule from '../vendor/opencv.js';
 import {PortalDetector,matchPortal,NORMALIZED_SIZE} from '../src/detector.mjs';
-import {MARKERS,markerPixels,CODE_CELLS,CELL_SIZE} from '../src/marker.mjs';
+import {MARKERS,markerPixels,CODE_CELLS,CELL_SIZE,MARKER_SIZE,markerSvg} from '../src/marker.mjs';
 import {MarkerTracks,MarkerAssignments} from '../src/tracks.mjs';
 import {homography,project} from '../src/geometry.mjs';
+const reference=rgbaPng(readFileSync(new URL('./fixtures/portal-v3-reference.png',import.meta.url)));
 const cv=await cvModule,detector=new PortalDetector(cv),width=800,height=450;
 const square=(x=160,y=120,s=170)=>[{x,y},{x:x+s,y},{x:x+s,y:y+s},{x,y:y+s}];
-function changeCell(pixels,size,index,value){const [cx,cy]=CODE_CELLS[index];for(let y=0;y<size;y++)for(let x=0;x<size;x++){const px=(x+.5)*200/size,py=(y+.5)*200/size;if(px>=cx&&px<cx+CELL_SIZE&&py>=cy&&py<cy+CELL_SIZE)pixels[y*size+x]=value;}}
+function changeCell(pixels,size,index,value){const [cx,cy]=CODE_CELLS[index];for(let y=0;y<size;y++)for(let x=0;x<size;x++){const px=(x+.5)*MARKER_SIZE/size,py=(y+.5)*MARKER_SIZE/size;if(px>=cx&&px<cx+CELL_SIZE&&py>=cy&&py<cy+CELL_SIZE)pixels[y*size+x]=value;}}
 function scene(markers,{brightness=1,blur=0,occlude=false}={}){
   const gray=new cv.Mat(height,width,cv.CV_8UC1,new cv.Scalar(230)),rgba=new cv.Mat();
   for(const {id='DP-001',corners=square(),kind='portal'} of markers){
-    const size=200,mono=markerPixels(size,id,{includeCode:kind!=='uncoded'});
+    const size=kind==='reference'?reference.width:200,mono=kind==='reference'?Uint8Array.from({length:size*size},(_,i)=>reference.rgba[i*4]):kind==='legacy'?legacyPixels(size,id):markerPixels(size,id,{includeCode:kind!=='uncoded'});
     if(kind==='blank')mono.fill(0);
     if(kind==='noise')for(let i=0;i<mono.length;i++)mono[i]=((Math.floor(i/size/18)*7+Math.floor(i%size/18)*11)%5<2)?255:0;
     const src=cv.matFromArray(size,size,cv.CV_8UC1,mono),warped=new cv.Mat();
@@ -38,9 +42,9 @@ test('detects both markers in one frame under mixed perspective and lighting',()
 });
 test('border decoding rejects absent, mixed and damaged codes without guessing',()=>{
   assert.equal(matchPortal(markerPixels(NORMALIZED_SIZE,'DP-001',{includeCode:false})),null);
-  const corrupt=markerPixels(NORMALIZED_SIZE,'DP-001');changeCell(corrupt,NORMALIZED_SIZE,0,0);changeCell(corrupt,NORMALIZED_SIZE,1,0);assert.equal(matchPortal(corrupt),null);
+  const corrupt=markerPixels(NORMALIZED_SIZE,'DP-001');changeCell(corrupt,NORMALIZED_SIZE,0,0);changeCell(corrupt,NORMALIZED_SIZE,2,0);assert.equal(matchPortal(corrupt),null);
   const oneError=markerPixels(NORMALIZED_SIZE,'DP-001');changeCell(oneError,NORMALIZED_SIZE,0,0);assert.equal(matchPortal(oneError)?.id,'DP-001');
-  const hybrid=markerPixels(NORMALIZED_SIZE,'DP-001');for(const i of [0,1,2,3,8,9])changeCell(hybrid,NORMALIZED_SIZE,i,MARKERS[1].bits[i]*255);assert.equal(matchPortal(hybrid),null);
+  const hybrid=markerPixels(NORMALIZED_SIZE,'DP-001');for(const i of [0,1,2,3])changeCell(hybrid,NORMALIZED_SIZE,i,MARKERS[1].bits[i]*255);assert.equal(matchPortal(hybrid),null);
 });
 test('rejects blank/coded distractors and partial coverage; keeps the unaffected marker',()=>{
   for(const kind of ['blank','noise','uncoded'])assert.deepEqual(detect([{kind}]),[]);
@@ -71,4 +75,21 @@ test('content changes affect only their marker and locks clear on source reset',
 test('homography maps artwork corners exactly to the target quadrilateral',()=>{
   const corners=[{x:175,y:40},{x:420,y:110},{x:375,y:310},{x:210,y:260}],h=homography(corners);
   [[0,0],[1,0],[1,1],[0,1]].forEach(([x,y],i)=>{const p=project(h,x,y);assert.ok(Math.hypot(p.x-corners[i].x,p.y-corners[i].y)<1e-7);});
+});
+
+test('the supplied artwork itself decodes as DP-001 through rotations, perspective and lighting',()=>{
+ for(let r=0;r<4;r++){const q=[{x:125,y:45},{x:345,y:75},{x:330,y:300},{x:110,y:255}],corners=q.map((_,i)=>q[(i+r)%4]);const out=detect([{kind:'reference',corners}],{brightness:.55,blur:3});assert.equal(out.length,1);assert.equal(out[0].id,'DP-001');assert.equal(out[0].version,3);for(let i=0;i<4;i++)assert.ok(Math.hypot(out[0].corners[i].x-corners[i].x,out[0].corners[i].y-corners[i].y)<5);}
+});
+test('vector reconstruction preserves the supplied design at its native resolution',()=>{
+ const pixels=markerPixels(800),different=pixels.reduce((count,value,i)=>count+((value>127)!==(reference.rgba[i*4]>127)),0);assert.ok(1-different/pixels.length>.999,'More than 99.9% of black/white pixels should match the supplied design.');
+});
+test('new and legacy prints coexist, while duplicate IDs across versions are suppressed',()=>{
+ const out=detect([{id:'DP-001',kind:'legacy',corners:square(60,90,170)},{id:'DP-002',corners:square(460,130,170)}]);assert.deepEqual(out.map(d=>[d.id,d.version]),[['DP-001',2],['DP-002',3]]);
+ assert.deepEqual(detect([{id:'DP-001',kind:'legacy',corners:square(60,90,140)},{id:'DP-001',corners:square(330,90,140)}]),[]);
+});
+
+test('published logo and print SVGs match the recognition geometry',()=>{
+ for(const marker of MARKERS)for(const quiet of [0,100]){const file=`../assets/brand/${marker.slug}${quiet?'-print':''}.svg`;assert.equal(readFileSync(new URL(file,import.meta.url),'utf8'),markerSvg({id:marker.id,quiet}));}
+ assert.equal(readFileSync(new URL('../assets/brand/portal-marker.svg',import.meta.url),'utf8'),markerSvg());
+ assert.deepEqual(readFileSync(new URL('../assets/brand/portal-logo.png',import.meta.url)),readFileSync(new URL('./fixtures/portal-v3-reference.png',import.meta.url)));
 });

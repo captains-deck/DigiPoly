@@ -11,7 +11,7 @@ This repository contains a browser studio, an optional Cloudflare workspace serv
 ## What you can do
 
 - Create environments with their own placements, backgrounds and campaign channels.
-- Track two distinct printed marker IDs: **DP-001** and **DP-002**. The border identifies the marker; the central D is the brand.
+- Track two distinct printed marker IDs: **DP-001** and **DP-002**. The linked corner patterns identify each marker; the central D is the brand. DP-001 matches the new logo, while DP-002 turns the inner corner links. Existing v2 prints still work.
 - Add up to two experimental **GhostMarker image targets** per environment. Encode a picture, confirm its hidden ID, then track the picture while casting. See the [GhostMarker guide](docs/GHOSTMARKER.md).
 - Assign images or muted looping videos independently to each marker in each channel.
 - Try the moving-marker demo or a fictional bedroom with a wall poster and desk-box sticker.
@@ -133,7 +133,7 @@ With `python3 serve.py` running, browser checks are available at:
 
 ## Current status and limits
 
-Version **0.5.0** is a proof of concept. Apple Silicon Mac camera capture and local delivery to OBS 33.0.1 were checked on 3 November 2026. Automated checks exercise moving markers and distinct audience content. Physical printed-marker performance across different rooms, cameras and distances still needs wider evaluation. Intel Mac, Windows and Linux releases are not validated.
+Version **0.7.0** is a proof of concept. Apple Silicon Mac camera capture and local delivery to OBS 33.0.1 were checked on 3 November 2026. Automated checks exercise moving markers and distinct audience content. Physical printed-marker performance across different rooms, cameras and distances still needs wider evaluation. Intel Mac, Windows and Linux releases are not validated.
 
 There are two canonical IDs, up to 12 environments and up to four channels in the active environment. Markers need readable borders and a reasonably flat surface. Tracking does not infer depth, segment a hand passing in front, or predict through a fully hidden marker. Video audio, native virtual-camera drivers and automatic broadcast routing are outside this preview.
 

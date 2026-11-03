@@ -1,9 +1,9 @@
 {
   "project": "GhostMarker",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "files": {
     "codec.mjs": "f83c030ae1471f8d4c9d013709e3a2720326cf242e510de22e4e9d48508ab018",
-    "detector.mjs": "6e2e39ba888fd913aaf6037da021f70a968bfc9b64789396f27876ec251f3005",
+    "detector.mjs": "c5f16409c220ad786e6b9c6cb457a5a712179caf7710dbb5f19f918f85642496",
     "tracking.mjs": "f405c396630112a4b3d36b8fb2bbe5f9b0ac1012ce4465afc4e84c9281454f23",
     "browser.mjs": "d36fd6136c9ba65d08fb1506012efbaa76d6e6630c30d38678822c4b87bd4394",
     "probe.js": "bc3e70264276e546a3de14ec0b4f7edd3a43439306ffb81152032d8b3ab1b152"
