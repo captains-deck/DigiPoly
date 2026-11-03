@@ -1,0 +1,29 @@
+{
+  "name": "digipoly-studio",
+  "main": "cloud/worker.mjs",
+  "account_id": "REPLACE_WITH_YOUR_CLOUDFLARE_ACCOUNT_ID",
+  "compatibility_date": "2026-11-03",
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
+    "directory": "./dist",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "vars": {
+    "ACCESS_ISSUER": "https://YOUR_TEAM.cloudflareaccess.com",
+    "ACCESS_AUD": "REPLACE_WITH_YOUR_ACCESS_APPLICATION_AUD"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "digipoly-cloud",
+      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "migrations_dir": "cloud/migrations"
+    }
+  ],
+  "r2_buckets": [{"binding": "MEDIA", "bucket_name": "digipoly-media"}],
+  "routes": [{"pattern": "studio.example.com", "custom_domain": true}]
+}

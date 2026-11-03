@@ -1,0 +1,25 @@
+dist/
+.wrangler/
+node_modules/
+.env
+.env.*
+.dev.vars*
+releases/
+.live-data/
+
+# Personal deployment settings and operational history stay on this machine.
+/wrangler.jsonc
+/docs/DEPLOYMENT.md
+/references/
+
+# Local account/cache data, recordings and generated packages.
+cloud-cache/
+*.log
+*.dmg
+*.zip
+*.mp4
+*.mov
+*.mkv
+.DS_Store
+__pycache__/
+*.pyc

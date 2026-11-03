@@ -1,0 +1,2 @@
+# Preserve the vendored upstream distribution without whitespace rewrites.
+vendor/opencv.js -whitespace linguist-vendored

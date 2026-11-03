@@ -1,0 +1,35 @@
+{
+  "name": "digipoly-studio",
+  "version": "0.5.0",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/captains-deck/DigiPoly.git"
+  },
+  "homepage": "https://digipoly.co.uk",
+  "bugs": {
+    "url": "https://github.com/captains-deck/DigiPoly/issues"
+  },
+  "description": "Local DigiPoly studio with environments, reusable media and audience-specific campaign channels",
+  "scripts": {
+    "start": "python3 serve.py",
+    "build": "node scripts/build.mjs",
+    "deploy": "npm run build && npx --yes wrangler@4.20.3 deploy",
+    "test": "node --test tests/*.test.mjs",
+    "assets": "node scripts/generate-assets.mjs",
+    "campaign-assets": "node scripts/campaign-assets.mjs",
+    "live": "electron .",
+    "live:package": "node scripts/package-live.mjs",
+    "cloud:migrate": "npx --yes wrangler@4.20.3 d1 migrations apply digipoly-cloud --remote"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "electron": "45.2.1"
+  },
+  "main": "live/main.mjs",
+  "productName": "DigiPoly Live"
+}
