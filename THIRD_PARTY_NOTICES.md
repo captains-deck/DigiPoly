@@ -22,3 +22,7 @@ Development dependencies and their resolved versions are recorded in `package-lo
 - `references/`: local design-reference images, excluded from source publication and application builds.
 
 User-uploaded media belongs to its respective owner and is not part of this repository's licence. Uploads and desktop account/cache files must not be bundled in source or release archives.
+
+## GhostMarker
+
+`vendor/ghostmarker/` is a versioned snapshot of the separate GhostMarker project, licensed under its retained [MIT licence](vendor/ghostmarker/LICENSE). Source hashes and version are in `vendor/ghostmarker/snapshot.json`. It contains an original experimental DCT codec; no StegaStamp or TrustMark model weights or source are bundled. The existing OpenCV runtime is shared.

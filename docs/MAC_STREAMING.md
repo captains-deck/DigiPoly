@@ -168,3 +168,7 @@ Links remain stable on the same installation for the same channel IDs. A new Mac
 | npm install or tests fail on old Node | Use Node 24. The older Node 20 requirement did not cover the current desktop tooling and SQLite tests. |
 
 The app's cache and sign-in session live under `~/Library/Application Support/DigiPoly Live/` for the packaged app. Do not share that directory or delete it as a first troubleshooting step: it contains downloaded media, account state and the key used by your OBS links.
+
+## GhostMarker picture targets (0.6)
+
+Use **Environment markers → + GhostMarker** to create or import an image target. Save to cloud and load it in the updated Live app; reference images travel with the workspace. Existing coded markers and OBS channel links keep working. See the [GhostMarker guide](GHOSTMARKER.md) for printing, tracking states and experimental limitations.

@@ -1,4 +1,4 @@
-export const referencedFiles=state=>[...new Set([...state.media.map(m=>m.id),...state.environments.map(e=>e.scene.background.assetId).filter(Boolean)])];
+export const referencedFiles=state=>[...new Set([...state.media.map(m=>m.id),...state.environments.flatMap(e=>e.markers.filter(m=>m.kind==='ghost').map(m=>m.referenceId)),...state.environments.map(e=>e.scene.background.assetId).filter(Boolean)])];
 export async function sha256(blob){const data=blob instanceof Blob?await blob.arrayBuffer():blob;return [...new Uint8Array(await crypto.subtle.digest('SHA-256',data))].map(b=>b.toString(16).padStart(2,'0')).join('');}
 export class CloudClient {
   constructor(fetcher=(...args)=>globalThis.fetch(...args)){this.fetcher=fetcher;}

@@ -1,6 +1,6 @@
 {
   "name": "digipoly-studio",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "license": "MIT",
   "repository": {
@@ -21,7 +21,8 @@
     "campaign-assets": "node scripts/campaign-assets.mjs",
     "live": "electron .",
     "live:package": "node scripts/package-live.mjs",
-    "cloud:migrate": "npx --yes wrangler@4.20.3 d1 migrations apply digipoly-cloud --remote"
+    "cloud:migrate": "npx --yes wrangler@4.20.3 d1 migrations apply digipoly-cloud --remote",
+    "ghostmarker:sync": "node scripts/sync-ghostmarker.mjs"
   },
   "engines": {
     "node": ">=24"

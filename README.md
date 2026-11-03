@@ -12,6 +12,7 @@ This repository contains a browser studio, an optional Cloudflare workspace serv
 
 - Create environments with their own placements, backgrounds and campaign channels.
 - Track two distinct printed marker IDs: **DP-001** and **DP-002**. The border identifies the marker; the central D is the brand.
+- Add up to two experimental **GhostMarker image targets** per environment. Encode a picture, confirm its hidden ID, then track the picture while casting. See the [GhostMarker guide](docs/GHOSTMARKER.md).
 - Assign images or muted looping videos independently to each marker in each channel.
 - Try the moving-marker demo or a fictional bedroom with a wall poster and desk-box sticker.
 - Upload media, upload a background, or capture a still background with a camera.

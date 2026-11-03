@@ -1,0 +1,1 @@
+self.onmessage=async({data})=>{let detector;try{importScripts('/vendor/opencv.js');const cv=await self.cv;const {GhostDetector}=await import('./detector.mjs');detector=new GhostDetector(cv,[data.target]);self.postMessage({features:detector.targets[0].keys.size()});}catch(error){self.postMessage({error:error.message||String(error)});}finally{detector?.close();}};

@@ -58,3 +58,7 @@ The simple Python server has no cloud service. Local Studio edits cannot current
 Studio's **Clean output** opens a separate window for a channel. Keep Studio and its output windows open, then capture the desired window in OBS. Loading `output.html` directly as an OBS Browser Source cannot obtain the parent Studio's video stream.
 
 For the desktop route, use Live's **Copy OBS link** instead. That supplies a standalone local receiver suitable for OBS Browser Sources and survives app restarts for the same channel and installation.
+
+## GhostMarker picture targets (0.6)
+
+Use **Environment markers → + GhostMarker** to create or import an image target. Save to cloud and load it in the updated Live app; reference images travel with the workspace. Existing coded markers and OBS channel links keep working. See the [GhostMarker guide](GHOSTMARKER.md) for printing, tracking states and experimental limitations.

@@ -56,7 +56,7 @@ export async function startServer({root,secret,port=18777,onPeer=()=>{},onAnswer
         const info=await stat(file.path);res.setHeader('Content-Type',file.type);res.setHeader('Content-Length',info.size);if(req.method==='HEAD')res.end();else createReadStream(file.path).pipe(res);return;
       }
       const relative=path==='/'?'live/index.html':path.slice(1);
-      if(!/^(live\/(index\.html|style\.css|app\.mjs|runtime\.mjs|peer\.mjs|receiver\.html|receiver\.mjs)|src\/[\w.-]+\.(mjs|js)|vendor\/opencv\.js|assets\/[\w/.-]+\.(svg|png|jpg|webp))$/.test(relative)){reply({error:'Not found'},404);return;}
+      if(!/^(live\/(index\.html|style\.css|app\.mjs|runtime\.mjs|peer\.mjs|receiver\.html|receiver\.mjs)|src\/[\w.-]+\.(mjs|js)|vendor\/(opencv\.js|ghostmarker\/[\w.-]+\.(mjs|js))|assets\/[\w/.-]+\.(svg|png|jpg|webp))$/.test(relative)){reply({error:'Not found'},404);return;}
       const file=resolve(root,relative);if(!file.startsWith(resolve(root)+'/')){reply({error:'Not found'},404);return;}
       const bytes=await readFile(file);res.setHeader('Content-Type',types[extname(file)]||'application/octet-stream');res.setHeader('Content-Length',bytes.length);res.end(req.method==='HEAD'?undefined:bytes);
     }catch{if(!res.headersSent)reply({error:'Unavailable'},500);else res.end();}

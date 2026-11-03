@@ -4,14 +4,17 @@ import { MARKERS } from './marker.mjs';
 import {defaultScene,drawCover} from './scenes.mjs';
 
 export class DemoScene {
-  constructor(images) {this.planes=MARKERS.map((marker,i)=>{const plane=new PlaneRenderer();plane.setImage(images[i]);return plane;});}
+  constructor(images) {this.ghostPlanes=new Map();this.planes=MARKERS.map((marker,i)=>{const plane=new PlaneRenderer();plane.setImage(images[i]);return plane;});}
+  setGhosts(targets){for(const [id,plane] of this.ghostPlanes)if(!targets.some(t=>t.id===id)){plane.dispose();this.ghostPlanes.delete(id);}for(const t of targets)if(!this.ghostPlanes.has(t.id)){const plane=new PlaneRenderer();plane.setImage(t.picture);this.ghostPlanes.set(t.id,plane);}}
+  close(){this.planes.forEach(p=>p.dispose());for(const p of this.ghostPlanes.values())p.dispose();this.ghostPlanes.clear();}
+  drawGhost(ctx,id,q){const plane=this.ghostPlanes.get(id);if(plane&&q)ctx.drawImage(plane.draw(q),0,0);}
   draw(ctx,time,scene=defaultScene(),background,markerIds=MARKERS.map(m=>m.id)) {
     const t=time/1000;
     if(scene.layout!=='moving'){
       ctx.save();
       if(scene.motion){ctx.translate(640+Math.sin(t*.24)*2,360+Math.cos(t*.19)*1.5);ctx.scale(1.012,1.012);ctx.translate(-640,-360);}
       if(background)drawCover(ctx,background);else this.drawGrid(ctx);
-      if(scene.layout==='placed')for(const id of markerIds){const index=MARKERS.findIndex(m=>m.id===id);if(index>=0)this.drawMarker(ctx,index,scene.placements[id]);}
+      if(scene.layout==='placed')for(const id of markerIds){const index=MARKERS.findIndex(m=>m.id===id);if(index>=0)this.drawMarker(ctx,index,scene.placements[id]);else this.drawGhost(ctx,id,scene.placements[id]);}
       ctx.restore();return;
     }
     this.drawGrid(ctx);
@@ -28,6 +31,7 @@ export class DemoScene {
       const border=[[-.12,-.12],[1.12,-.12],[1.12,1.12],[-.12,1.12]].map(([x,y])=>project(homography(q),x,y));
       ctx.font='14px sans-serif';ctx.fillStyle=marker.color;ctx.fillText(marker.id,cx-26,Math.max(...border.map(p=>p.y))+24);
     });
+    for(const id of markerIds)if(this.ghostPlanes.has(id)){const q=scene.placements[id]?.map(p=>({x:p.x+Math.sin(t*.35)*20,y:p.y+Math.cos(t*.4)*15}));this.drawGhost(ctx,id,q);}
   }
   drawGrid(ctx){
     const g=ctx.createLinearGradient(0,0,1280,720);g.addColorStop(0,'#24384a');g.addColorStop(.6,'#1b293b');g.addColorStop(1,'#101b2b');ctx.fillStyle=g;ctx.fillRect(0,0,1280,720);

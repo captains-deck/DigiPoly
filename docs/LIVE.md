@@ -50,3 +50,7 @@ The local build is an Apple Silicon Mac preview with a local ad-hoc signature. P
 `tests/live.html` exercises both receivers, actual video input with generated marker footage, audience differences and black output on stop. The automated cloud tests cover signature validation, tenant isolation, immutable file hashes, incomplete uploads and concurrent save conflicts. `tests/live-server.test.mjs` covers loopback source access, per-channel tokens and reconnection state. Camera capture and separate local outputs were verified on Apple Silicon with OBS 33.0.1. The account-specific deployment log stays local and is excluded from the public repository.
 
 Sources: [OBS Browser Source](https://obsproject.com/kb/browser-source), [Electron security](https://www.electronjs.org/docs/latest/tutorial/security), [Cloudflare Access JWT validation](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/).
+
+## GhostMarker picture targets (0.6)
+
+Use **Environment markers → + GhostMarker** to create or import an image target. Save to cloud and load it in the updated Live app; reference images travel with the workspace. Existing coded markers and OBS channel links keep working. See the [GhostMarker guide](GHOSTMARKER.md) for printing, tracking states and experimental limitations.

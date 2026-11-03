@@ -1,7 +1,7 @@
 import {validateWorkspace, BUILTIN_MEDIA, LIMITS} from '../src/workspace.mjs';
 export const HASH=/^[a-f0-9]{64}$/;
 export const FILE_TYPES=new Set(['image/png','image/jpeg','image/webp','video/mp4','video/webm']);
-export function fileIds(state){return [...new Set([...state.media.map(m=>m.id),...state.environments.map(e=>e.scene.background.assetId).filter(Boolean)])];}
+export function fileIds(state){return [...new Set([...state.media.map(m=>m.id),...state.environments.flatMap(e=>e.markers.filter(m=>m.kind==='ghost').map(m=>m.referenceId)),...state.environments.map(e=>e.scene.background.assetId).filter(Boolean)])];}
 export function validateSnapshot(raw){
   const state=validateWorkspace(raw?.workspace),files=raw?.files;
   if(!Number.isInteger(raw.baseRevision)||raw.baseRevision<0||!files||typeof files!=='object'||Array.isArray(files))throw new Error('Invalid cloud save.');
@@ -16,6 +16,7 @@ export function validateSnapshot(raw){
   for(const id of fileIds(state)){
     const f=files[id];if(!safeId.test(id)||!f||!HASH.test(f.hash)||!FILE_TYPES.has(f.type)||!Number.isInteger(f.size)||f.size<=0||f.size>(f.type.startsWith('video/')?100:10)*1024*1024)throw new Error('A required upload is invalid or missing.');
     if(state.environments.some(e=>e.scene.background.assetId===id)&&!f.type.startsWith('image/'))throw new Error('Backgrounds must be images.');
+    if(state.environments.some(e=>e.markers.some(m=>m.kind==='ghost'&&m.referenceId===id))&&(f.type!=='image/png'||f.size>3*1024*1024))throw new Error('GhostMarker references must be PNG images smaller than 3 MB.');
     cleanFiles[id]={hash:f.hash,type:f.type,size:f.size};size+=f.size;
   }
   if(size>512*1024*1024)throw new Error('This POC supports 512 MB per workspace.');

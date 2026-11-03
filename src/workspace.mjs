@@ -1,5 +1,6 @@
+import {CODEC,validId,validateDimensions,validateCells} from '../vendor/ghostmarker/codec.mjs';
 import {MARKERS} from './marker.mjs';
-import {defaultScene,bedroomScene,normalizeScene} from './scenes.mjs';
+import {defaultScene,bedroomScene,normalizeScene,validQuad} from './scenes.mjs';
 export const BUILTIN_MEDIA = [
   {id:'uk-runner',name:'North • Trail runner',kind:'image',audience:'UK · English',url:'/assets/artwork/uk-runner.svg'},
   {id:'uk-coffee',name:'Daybreak • Cold brew',kind:'image',audience:'UK · English',url:'/assets/artwork/uk-coffee.svg'},
@@ -9,7 +10,7 @@ export const BUILTIN_MEDIA = [
   {id:'on-air',name:'On air',kind:'image',audience:'Creator identity',url:'/assets/artwork/on-air.svg'},
   {id:'next-wave',name:'The next wave',kind:'image',audience:'A change of scene',url:'/assets/artwork/next-wave.svg'},
 ];
-export const LIMITS={environments:12,channels:4,media:50};
+export const LIMITS={environments:12,channels:4,media:50,ghostMarkers:2};
 const id=prefix=>`${prefix}-${crypto.randomUUID()}`;
 const text=(value,fallback='')=>String(value??'').trim().slice(0,80)||fallback;
 export function makeChannel({name='New channel',country='',language=''}={}){return {id:id('channel'),name:text(name,'New channel'),country:text(country),language:text(language),assignments:{}};}
@@ -47,6 +48,20 @@ export function addChannel(state,envId,fields){const env=environment(state,envId
 export function removeChannel(state,envId,channelId){const env=environment(state,envId);channelFor(state,envId,channelId);if(env.channels.length===1)throw new Error('Keep at least one campaign channel.');env.channels=env.channels.filter(c=>c.id!==channelId);}
 export function updateDetails(target,fields){for(const key of ['name','description','country','language'])if(key in fields)target[key]=text(fields[key],key==='name'?target.name:'');}
 export function addMarker(state,envId,markerId,label){const env=environment(state,envId);if(!MARKERS.some(m=>m.id===markerId)||env.markers.some(m=>m.id===markerId))throw new Error('Choose an available coded marker.');env.markers.push({id:markerId,label:text(label,markerId)});}
+export function validateGhostMarker(marker){
+  if(marker.kind!=='ghost'||!validId(marker.id)||marker.codec!==CODEC||!/^ghostref-[a-zA-Z0-9_-]{1,80}$/.test(marker.referenceId)||!Number.isFinite(marker.strength)||marker.strength<24||marker.strength>128)throw new Error('Saved GhostMarker is invalid.');
+  validateDimensions(marker.width,marker.height);
+  return {id:marker.id,kind:'ghost',label:text(marker.label,marker.id),codec:CODEC,referenceId:marker.referenceId,width:marker.width,height:marker.height,strength:marker.strength,...(marker.cells?{cells:validateCells(marker.cells,marker.width,marker.height)}:{})};
+}
+export function ensureGhostPlacements(env){for(const clean of env.markers.filter(m=>m.kind==='ghost'))if(!validQuad(env.scene.placements[clean.id])){const scale=Math.min(500/clean.width,540/clean.height),w=clean.width*scale,h=clean.height*scale;env.scene.placements[clean.id]=[{x:490,y:40},{x:490+w,y:40},{x:490+w,y:40+h},{x:490,y:40+h}];}}
+export function addGhostMarker(state,envId,marker){
+  const env=environment(state,envId),clean=validateGhostMarker(marker);
+  if(env.markers.filter(m=>m.kind==='ghost').length>=LIMITS.ghostMarkers)throw new Error('This POC supports two GhostMarkers per environment.');
+  if(env.markers.some(m=>m.id===clean.id))throw new Error('This GhostMarker is already in the environment.');
+  env.markers.push(clean);
+  ensureGhostPlacements(env);
+  return clean;
+}
 export function removeMarker(state,envId,markerId){const env=environment(state,envId);env.markers=env.markers.filter(m=>m.id!==markerId);for(const c of env.channels)delete c.assignments[markerId];}
 export function assignMedia(state,envId,channelId,markerId,mediaId){const env=environment(state,envId),channel=channelFor(state,envId,channelId);if(!env.markers.some(m=>m.id===markerId))throw new Error('Marker is not in this environment.');if(mediaId&&!allMedia(state).some(m=>m.id===mediaId))throw new Error('Media is not in the library.');if(mediaId)channel.assignments[markerId]=mediaId;else delete channel.assignments[markerId];}
 export function mediaUsage(state,mediaId){return state.environments.flatMap(e=>e.channels.flatMap(c=>Object.entries(c.assignments).filter(([,value])=>value===mediaId).map(([markerId])=>({environment:e.name,channel:c.name,markerId}))));}
@@ -57,7 +72,8 @@ export function validateWorkspace(raw){
   for(const env of state.environments){
     if(typeof env.id!=='string'||ids.has(env.id)||!Array.isArray(env.markers)||!Array.isArray(env.channels)||!env.channels.length)throw new Error('Saved environment is invalid.');ids.add(env.id);
     env.name=text(env.name,'Environment');env.description=text(env.description);env.scene=normalizeScene(env.scene);
-    const markers=new Set();for(const marker of env.markers){if(!MARKERS.some(m=>m.id===marker.id)||markers.has(marker.id))throw new Error('Saved marker is invalid.');markers.add(marker.id);marker.label=text(marker.label,marker.id);}
+    const markers=new Set();let ghosts=0;env.markers=env.markers.map(marker=>{if(!marker||markers.has(marker.id))throw new Error('Saved marker is invalid.');markers.add(marker.id);if(marker.kind==='ghost'){if(++ghosts>LIMITS.ghostMarkers)throw new Error('Too many GhostMarkers.');const clean=validateGhostMarker(marker);return clean;}if(!MARKERS.some(m=>m.id===marker.id))throw new Error('Saved marker is invalid.');return {id:marker.id,label:text(marker.label,marker.id)};});
+    ensureGhostPlacements(env);
     for(const c of env.channels){if(typeof c.id!=='string'||ids.has(c.id)||!c.assignments||typeof c.assignments!=='object'||Array.isArray(c.assignments))throw new Error('Saved channel is invalid.');ids.add(c.id);updateDetails(c,{name:c.name,country:c.country,language:c.language});for(const key of Object.keys(c.assignments))if(!markers.has(key))delete c.assignments[key];}
   }
   for(const media of state.media)if(typeof media.id!=='string'||!['image','video'].includes(media.kind)||ids.has(media.id)||BUILTIN_MEDIA.some(m=>m.id===media.id))throw new Error('Saved media is invalid.');else ids.add(media.id);
