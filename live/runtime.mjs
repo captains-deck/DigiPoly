@@ -31,7 +31,7 @@ export class LiveRuntime {
   input(mode,video=null){this.mode=mode;this.video=video;this.sequence++;this.tracks.reset();if(mode==='paused'){this.ctx.fillStyle='#000';this.ctx.fillRect(0,0,1280,720);for(const output of this.compositor?.outputs.values()||[]){output.ctx.fillStyle='#000';output.ctx.fillRect(0,0,1280,720);}}}
   start(){this.timer=setInterval(()=>this.tick(),34);this.tick();}
   async tick(){
-    if(!this.closed&&this.compositor&&this.tracks.sweep()){this.compositor.render(this.env,this.source,[]);this.onFrame({frame:this.source,tracks:[],ms:0});}
+    if(!this.closed&&this.compositor&&this.tracks.sweep()){const locked=this.tracks.snapshot().filter(t=>t.locked);this.compositor.render(this.env,this.source,locked);this.onFrame({frame:this.source,tracks:locked,ms:0});}
     if(this.closed||this.pending||this.mode==='camera'&&this.video?.readyState<2)return;
     this.pending=true;const sequence=this.sequence;
     try{

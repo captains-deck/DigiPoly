@@ -28,7 +28,7 @@ Loss of image geometry stops casting immediately on the next processed frame. If
 
 This is GhostMarker's original GM1 DCT codec, **not a trained StegaStamp model**. Reference upload is required for localisation. Plain areas are left untouched, but artifacts can remain visible in texture, especially at stronger settings. Detailed matte photographs are a better starting point than flat logos or glossy prints. Small images, motion blur, steep angles, cropping, glare and print processing may prevent decoding.
 
-Synthetic and actual browser pipeline tests pass. Physical print-to-webcam recovery still needs hands-on validation. Detection is slower than coded-border tracking; expect frame rate to depend on target count and hardware. The worker uses up to 960 pixels of source width when GhostMarkers are present, compared with 800 for coded markers alone.
+Synthetic and actual browser pipeline tests pass. Physical print-to-webcam recovery still needs hands-on validation. Detection is slower than coded-border tracking; expect frame rate to depend on target count and hardware. The worker analyses up to 960 pixels of source width for coded markers and GhostMarkers. That width keeps the linked corner cells from aliasing away on a 1280-pixel frame.
 
 Use one physical copy per ID. Two visually near-identical references are rejected within an environment. Search narrows around located pictures and scans the full frame periodically; a newly appearing duplicate outside that region is not necessarily detected immediately. A hidden ID is not proof of ownership or a security feature.
 

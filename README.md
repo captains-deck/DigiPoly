@@ -108,7 +108,7 @@ npm test
 npm run build
 ```
 
-`npm test` runs 27 Node test groups covering marker detection, identity tracking, workspace behaviour, cloud authorisation and the local output bridge. Tests use local fixtures; they do not need a Cloudflare account. Bridge tests need permission to bind a local loopback port.
+`npm test` runs the Node test suite covering marker detection, identity tracking, workspace behaviour, cloud authorisation and the local output bridge. Tests use local fixtures; they do not need a Cloudflare account. Bridge tests need permission to bind a local loopback port.
 
 With `python3 serve.py` running, browser checks are available at:
 
@@ -135,7 +135,7 @@ With `python3 serve.py` running, browser checks are available at:
 
 Version **0.7.0** is a proof of concept. Apple Silicon Mac camera capture and local delivery to OBS 33.0.1 were checked on 3 November 2026. Automated checks exercise moving markers and distinct audience content. Physical printed-marker performance across different rooms, cameras and distances still needs wider evaluation. Intel Mac, Windows and Linux releases are not validated.
 
-There are two canonical IDs, up to 12 environments and up to four channels in the active environment. Markers need readable borders and a reasonably flat surface. Tracking does not infer depth, segment a hand passing in front, or predict through a fully hidden marker. Video audio, native virtual-camera drivers and automatic broadcast routing are outside this preview.
+There are two canonical IDs, up to 12 environments and up to four channels in the active environment. Markers need readable borders and a reasonably flat surface. A recently confirmed marker can stay on screen through a short miss: about a third of a second when that marker is steady in the image, and about a seventh of a second when it is moving. The overlay then drops. A second copy of the same ID clears that placement immediately. Tracking does not infer depth, segment a hand passing in front, or predict through a fully hidden marker. Video audio, native virtual-camera drivers and automatic broadcast routing are outside this preview.
 
 ## Licence and credits
 

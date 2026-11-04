@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import cvModule from '../vendor/opencv.js';
 import {PortalDetector,matchPortal,NORMALIZED_SIZE} from '../src/detector.mjs';
+import {TRACKING} from '../src/tracking-policy.mjs';
 import {MARKERS,markerPixels,CODE_CELLS,CELL_SIZE,MARKER_SIZE,markerSvg} from '../src/marker.mjs';
 import {MarkerTracks,MarkerAssignments} from '../src/tracks.mjs';
 import {homography,project} from '../src/geometry.mjs';
@@ -51,22 +52,33 @@ test('rejects blank/coded distractors and partial coverage; keeps the unaffected
   assert.deepEqual(detect([]),[]);
   assert.deepEqual(detect([{id:'DP-001',corners:square()},{id:'DP-002',corners:square(500,130)}],{occlude:true}).map(d=>d.id),['DP-002']);
 });
-test('same ID on two different prints is suppressed instead of jumping between copies',()=>{
-  assert.deepEqual(detect([{id:'DP-001',corners:square(60,90,140)},{id:'DP-001',corners:square(330,90,140)}]),[]);
+test('same ID on two different prints is suppressed and reported as ambiguous',()=>{
+  const image=scene([{id:'DP-001',corners:square(60,90,140)},{id:'DP-001',corners:square(330,90,140)}]);
+  assert.deepEqual(detector.detect(image,width,height),[]);
+  assert.deepEqual(detector.inspect(image,width,height).ambiguous,['DP-001']);
+});
+test('blank quads are ignored and an uncoded logo cannot supply an identity',()=>{
+  const blank=detector.inspect(scene([{kind:'blank'}]),width,height);
+  assert.equal(blank.detections.length,0);assert.equal(blank.observations.length,0);
+  const logo=detector.inspect(scene([{kind:'uncoded'}]),width,height);
+  assert.equal(logo.detections.length,0);assert.ok(logo.observations.every(d=>!d.id));
 });
 test('identity and assigned content survive crossing trajectories, reordered detections and re-entry',()=>{
   const tracks=new MarkerTracks(),assignments=new MarkerAssignments();assignments.set('DP-001','custom-one');assignments.set('DP-002','custom-two');
+  let now=1000;
   for(let i=0;i<=8;i++){
     const first=square(70+i*60,40,125),second=square(550-i*60,275,125);
     const detections=detect([{id:'DP-001',corners:first},{id:'DP-002',corners:second}]);assert.equal(detections.length,2);
-    const result=tracks.update(i%2?detections.reverse():detections);
+    const result=tracks.update(i%2?detections.reverse():detections,now);now+=40;
     for(const [id,expected,key] of [['DP-001',first,'custom-one'],['DP-002',second,'custom-two']]){
       const track=result.find(d=>d.id===id);assert.equal(assignments.get(track.id),key);assert.ok(Math.abs(track.corners[0].x-expected[0].x)<5);assert.equal(track.locked,i>0);
     }
   }
-  const visible=detect([{id:'DP-002',corners:square(90,260,125)}]);assert.deepEqual(tracks.update(visible).map(t=>t.id),['DP-002']);
-  const returned=detect([{id:'DP-001',corners:square(400,40,125)},{id:'DP-002',corners:square(90,260,125)}]);
-  assert.equal(tracks.update(returned).find(t=>t.id==='DP-001').locked,false);assert.equal(tracks.update(returned).find(t=>t.id==='DP-001').locked,true);assert.equal(assignments.get('DP-001'),'custom-one');
+  const visible=detect([{id:'DP-002',corners:square(90,260,125)}]);
+  assert.equal(tracks.update(visible,now).find(t=>t.id==='DP-001').phase,'holding');
+  assert.deepEqual(tracks.update(visible,now+TRACKING.stationaryHoldMs+30).map(t=>t.id),['DP-002']);
+  const returned=detect([{id:'DP-001',corners:square(400,40,125)},{id:'DP-002',corners:square(90,260,125)}]),again=now+TRACKING.stationaryHoldMs+80;
+  assert.equal(tracks.update(returned,again).find(t=>t.id==='DP-001').locked,false);assert.equal(tracks.update(returned,again+40).find(t=>t.id==='DP-001').locked,true);assert.equal(assignments.get('DP-001'),'custom-one');
 });
 test('content changes affect only their marker and locks clear on source reset',()=>{
   const assignments=new MarkerAssignments();assignments.set('DP-002','next-wave');assert.equal(assignments.get('DP-001'),'portal');assert.equal(assignments.get('DP-002'),'next-wave');

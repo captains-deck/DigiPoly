@@ -20,12 +20,16 @@ async function handle(data){
   const {frame,sequence}=data;
   try{
     if(sequenceSeen!==sequence){ghosts.reset();sequenceSeen=sequence;}
-    const start=performance.now(),width=Math.min(ghosts.targets.length?960:800,frame.width),height=Math.round(frame.height*width/frame.width);
+    // 960 is the width already used for GhostMarkers. The v3 inner links are only
+    // a few pixels wide after a 1280-frame is reduced to 800, and that aliasing
+    // drops identity on sharp frames. Acceptance thresholds are unchanged.
+    const start=performance.now(),width=Math.min(960,frame.width),height=Math.round(frame.height*width/frame.width);
     if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
     context.drawImage(frame,0,0,width,height);const pixels=context.getImageData(0,0,width,height).data;
-    const coded=detector.detect(pixels,width,height);
-    const detections=[...coded,...ghosts.detect(pixels,width,height,{exclude:coded.map(d=>d.corners)})];
-    for(const d of detections)d.corners=d.corners.map(p=>({x:p.x*frame.width/width,y:p.y*frame.height/height}));
+    const report=detector.inspect(pixels,width,height);
+    const coded=[...report.detections,...report.observations,...report.ambiguous.map(id=>({id,ambiguous:true}))];
+    const detections=[...coded,...ghosts.detect(pixels,width,height,{exclude:report.detections.map(d=>d.corners)})];
+    for(const d of detections) if(d.corners) d.corners=d.corners.map(p=>({x:p.x*frame.width/width,y:p.y*frame.height/height}));
     self.postMessage({type:'frame',frame,sequence,detections,ms:performance.now()-start},[frame]);
   }catch(error){frame.close();self.postMessage({type:'error',sequence,message:String(error)});}
 }

@@ -14,7 +14,7 @@ function pixelAt(pixels,x,y,r){
   if(r===3){sx=y;sy=SIZE-1-x;}
   return pixels[sy*SIZE+sx];
 }
-export function matchLegacyPortal(pixels){
+export function assessLegacyPortal(pixels){
   const rotations=[];
   for(let r=0;r<4;r++){
     let white=0,black=0,whiteHit=0,blackHit=0;
@@ -25,19 +25,21 @@ export function matchLegacyPortal(pixels){
     rotations.push({score:(whiteHit/white+blackHit/black)/2,rotation:r});
   }
   rotations.sort((a,b)=>b.score-a.score);
-  const best=rotations[0];
-  if(best.score<.87||best.score-rotations[1].score<.08)return null;
+  const best=rotations[0],margin=best.score-rotations[1].score;
   const read=CODE_CELLS.map(([cx,cy])=>{
     let white=0,total=0;
     for(let y=Math.ceil((cy+2)*SIZE/200);y<Math.floor((cy+CELL_SIZE-2)*SIZE/200);y++)
       for(let x=Math.ceil((cx+2)*SIZE/200);x<Math.floor((cx+CELL_SIZE-2)*SIZE/200);x++){white+=pixelAt(pixels,x,y,best.rotation)>127?1:0;total++;}
-    const level=white/total;return level>.78?1:level<.22?0:null;
+    const level=total?white/total:0;return level>.78?1:level<.22?0:null;
   });
   const uncertain=read.filter(b=>b===null).length;
-  if(uncertain>1)return null;
-  const ranked=MARKERS.map(marker=>({...marker,errors:read.reduce((n,b,i)=>n+(b!==null&&b!==marker.bits[i]?1:0),0)})).sort((a,b)=>a.errors-b.errors);
+  const ranked=MARKERS.map(marker=>({id:marker.id,errors:read.reduce((n,b,i)=>n+(b!==null&&b!==marker.bits[i]?1:0),0)})).sort((a,b)=>a.errors-b.errors);
+  return {rotation:best.rotation,score:best.score,margin,uncertain,errors:ranked[0].errors,separation:ranked[1].errors-ranked[0].errors,id:ranked[0].id};
+}
+export function matchLegacyPortal(pixels){
+  const best=assessLegacyPortal(pixels);
+  if(best.score<.87||best.margin<.08||best.uncertain>1||best.errors>1||best.separation<6)return null;
   // The two codewords differ in twelve cells. Reject ambiguous/damaged codes;
   // do not let the much larger shared D hide a bad identity match.
-  if(ranked[0].errors>1||ranked[1].errors-ranked[0].errors<6)return null;
-  return {...best,id:ranked[0].id,identityConfidence:(16-ranked[0].errors-uncertain)/16};
+  return {score:best.score,rotation:best.rotation,id:best.id,identityConfidence:(16-best.errors-best.uncertain)/16};
 }

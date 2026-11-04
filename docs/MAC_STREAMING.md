@@ -81,6 +81,13 @@ Print one of each ID. Two copies of the same ID in view are deliberately suppres
 5. Check the counter reaches **2/2 markers**. Move, rotate and swap the markers' positions. Each should retain the content assigned to its ID.
 6. Remove one marker. Its overlay should disappear; the other should remain. Bring it back and confirm its assignment returns.
 
+To compare a stationary poster with a moving sticker:
+
+1. Mount DP-001 flat and keep the camera still. In Studio the placement should read **Tracking**. Briefly pass a hand across it: the status may show **Brief hold** while the artwork stays, then return to **Tracking**. Cover it for a full second and the artwork should leave.
+2. Hold DP-002 and move it, or pan the camera across the fixed poster. The hold should be shorter. When the print leaves the frame, the artwork should go with it rather than remaining on the empty wall.
+3. Put two copies of the same ID in view. That placement should clear instead of jumping between them.
+4. Compare the UK and Spanish outputs. They should share the marker’s position and show different assigned media, with no tracking-status text in the picture.
+
 With no recognised marker, both editions show the same raw camera scene. Different output only becomes visible where a recognised marker has different assignments. An empty assignment leaves the original marker visible.
 
 **Stop camera** ends camera capture and sends black video. **Demo scene** explicitly switches back to the generated scene. These controls do not start or stop an OBS broadcast.
@@ -158,6 +165,7 @@ Links remain stable on the same installation for the same channel IDs. A new Mac
 | Camera permission is waiting | Find the macOS prompt. In System Settings → Privacy & Security → Camera, enable the app that requested access. Quit and reopen it if macOS asks. **Stop camera** cancels a pending attempt. |
 | No webcam or camera busy | Choose the correct device and close other apps using that physical camera. Do not add it directly to OBS at the same time. |
 | 0/2 markers | Use the coded print masters; show the entire border; improve light, move closer, keep the paper flat and reduce blur. The logo alone will not work. |
+| Overlay blinks, or sticks after the print moves | Studio shows **Brief hold** for a fraction of a second, then **Tracking** or **Out of view**. A wall poster with a still camera holds longer than a sticker or a panning camera. The artwork should not remain after the print has clearly left. |
 | One marker disappears when a second appears | Check they have different IDs. Two copies of DP-001 are not two independent placements. |
 | Both editions look identical | Confirm a marker is detected and each channel has different media assigned. Save, download and load any changes. |
 | OBS waits or shows black | Keep Live open, load the environment that owns the copied channel, and start webcam or Demo scene. Check the complete URL and 1280 × 720 size; refresh the Browser Source if needed. |
