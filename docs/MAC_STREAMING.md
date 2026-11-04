@@ -68,7 +68,7 @@ Use these settings:
 - Matte white paper with a complete white border and all four corner links intact.
 - Mount each page on flat card. Avoid folds, glare and glossy lamination.
 
-Use the updated Studio and Live 0.7 or later with the new linked-corner prints. DP-001 matches the logo; DP-002 turns the inner link in each corner. Older v2 prints remain recognised under their existing IDs.
+Use Studio and Live 0.8 or later with the current linked-corner prints. DP-001 matches the logo; DP-002 turns the inner link in each corner. Older v3 and v2 prints remain recognised under their existing IDs.
 
 Print one of each ID. Two copies of the same ID in view are deliberately suppressed rather than treated as separate placements. SVG masters are in `assets/brand/dp-001-print.svg` and `assets/brand/dp-002-print.svg`.
 

@@ -1,44 +1,44 @@
-import {markerPixels,MARKERS,CODE_CELLS,CELL_SIZE,MARKER_SIZE,CORNERS} from './marker.mjs';
+import * as currentMarker from './marker.mjs';
+import * as markerV3 from './marker-v3.mjs';
 import {assessLegacyPortal} from './legacy-marker-matcher.mjs';
+import {createLinkedAssessment} from './linked-marker-matcher.mjs';
 import {orderCorners} from './geometry.mjs';
 import {TRACKING} from './tracking-policy.mjs';
 export const NORMALIZED_SIZE=128;
-const SIZE=NORMALIZED_SIZE,template=markerPixels(SIZE,'DP-001',{includeCode:false}),samples=[];
-// The inner corner links carry identity. Compare the shared silhouette separately
-// so a large central D cannot overpower a wrong or damaged corner code.
-for(let y=3;y<SIZE-3;y++)for(let x=3;x<SIZE-3;x++){
-  const px=(x+.5)*800/SIZE,py=(y+.5)*800/SIZE;
-  if(!CORNERS.some(([fx,fy])=>{const cx=fx?800-px:px,cy=fy?800-py:py;return cx>=88&&cx<=168&&cy>=88&&cy<=168;}))samples.push([x,y,template[y*SIZE+x]>0]);
-}
-function pixelAt(pixels,x,y,r){if(r===1)return pixels[x*SIZE+SIZE-1-y];if(r===2)return pixels[(SIZE-1-y)*SIZE+SIZE-1-x];if(r===3)return pixels[(SIZE-1-x)*SIZE+y];return pixels[y*SIZE+x];}
-function assessLinked(pixels){
-  const rotations=[];
-  for(let r=0;r<4;r++){let white=0,black=0,whiteHit=0,blackHit=0;for(const [x,y,expected] of samples){const actual=pixelAt(pixels,x,y,r)>127;if(expected){white++;if(actual)whiteHit++;}else{black++;if(!actual)blackHit++;}}rotations.push({rotation:r,score:(whiteHit/white+blackHit/black)/2});}
-  rotations.sort((a,b)=>b.score-a.score);const best=rotations[0];
-  const read=CODE_CELLS.map(([cx,cy])=>{let white=0,total=0;for(let y=Math.ceil(cy*SIZE/MARKER_SIZE);y<Math.floor((cy+CELL_SIZE)*SIZE/MARKER_SIZE);y++)for(let x=Math.ceil(cx*SIZE/MARKER_SIZE);x<Math.floor((cx+CELL_SIZE)*SIZE/MARKER_SIZE);x++){white+=pixelAt(pixels,x,y,best.rotation)>127?1:0;total++;}const level=total?white/total:0;return level>=.78?1:level<=.22?0:null;});
-  const uncertain=read.filter(b=>b===null).length;
-  const ranked=MARKERS.map(marker=>({id:marker.id,errors:read.reduce((n,b,i)=>n+(b!==null&&b!==marker.bits[i]?1:0),0)})).sort((a,b)=>a.errors-b.errors);
-  return {rotation:best.rotation,score:best.score,margin:best.score-rotations[1].score,uncertain,errors:ranked[0].errors,separation:ranked[1].errors-ranked[0].errors,id:ranked[0].id};
-}
+const SIZE=NORMALIZED_SIZE;
+const assessCurrent=createLinkedAssessment(currentMarker,NORMALIZED_SIZE);
+const assessV3=createLinkedAssessment(markerV3,NORMALIZED_SIZE);
 function acceptLinked(assessed){
   if(assessed.score<.9||assessed.margin<.08||assessed.uncertain>1||assessed.errors>1||assessed.separation<5)return null;
-  return {rotation:assessed.rotation,score:assessed.score,id:assessed.id,identityConfidence:(8-assessed.errors-assessed.uncertain)/8,version:3};
+  return {rotation:assessed.rotation,score:assessed.score,id:assessed.id,identityConfidence:(8-assessed.errors-assessed.uncertain)/8,version:assessed.version,structure:assessed.structure};
 }
-function hint(assessed,score,margin,uncertain,errors,separation,version){
+function acceptLegacy(assessed){
+  if(assessed.score<.87||assessed.margin<.08||assessed.uncertain>1||assessed.errors>1||assessed.separation<6)return null;
+  return {rotation:assessed.rotation,score:assessed.score,id:assessed.id,identityConfidence:(16-assessed.errors-assessed.uncertain)/16,version:2};
+}
+function hint(assessed,score,margin,uncertain,errors,separation){
   if(assessed.score<score||assessed.margin<margin)return null;
   const identified=assessed.uncertain<=uncertain&&assessed.errors<=errors&&assessed.separation>=separation;
-  return {rotation:assessed.rotation,score:assessed.score,version,...(identified?{id:assessed.id}:{})};
+  return {rotation:assessed.rotation,score:assessed.score,version:assessed.version,...(identified?{id:assessed.id}:{})};
 }
+function bestOf(matches){return matches.filter(Boolean).sort((a,b)=>b.score-a.score)[0]||null;}
 function judgePortal(pixels){
-  const linked=assessLinked(pixels),legacy=assessLegacyPortal(pixels);
-  const strongL=acceptLinked(linked),strongG=legacy.score<.87||legacy.margin<.08||legacy.uncertain>1||legacy.errors>1||legacy.separation<6?null:{rotation:legacy.rotation,score:legacy.score,id:legacy.id,identityConfidence:(16-legacy.errors-legacy.uncertain)/16,version:2};
-  if(strongL&&strongG&&strongL.id!==strongG.id)return null;
-  if(strongL||strongG)return {kind:'strong',...(strongL||strongG)};
-  const weakL=hint(linked,TRACKING.linkedWeakScore,TRACKING.linkedWeakMargin,2,2,3,3);
-  const weakG=hint(legacy,TRACKING.legacyWeakScore,TRACKING.legacyWeakMargin,2,3,4,2);
-  if(weakL?.id&&weakG?.id&&weakL.id!==weakG.id){const best=weakL.score>=weakG.score?weakL:weakG;return {kind:'observation',rotation:best.rotation,score:best.score,quality:'geometry',version:best.version};}
-  const best=[weakL,weakG].filter(Boolean).sort((a,b)=>b.score-a.score)[0];
-  return best?{kind:'observation',rotation:best.rotation,score:best.score,quality:best.id?'weak':'geometry',version:best.version,...(best.id?{id:best.id}:{})}:null;
+  const current=assessCurrent(pixels),previous=assessV3(pixels),legacy=assessLegacyPortal(pixels);
+  const strong=[acceptLinked(current),acceptLinked(previous),acceptLegacy(legacy)].filter(Boolean);
+  if(new Set(strong.map(match=>match.id)).size>1)return null;
+  const chosen=strong.sort((a,b)=>(b.structure??b.score)-(a.structure??a.score)||b.score-a.score)[0];
+  if(chosen){const {structure,...match}=chosen;return {kind:'strong',...match};}
+  const weak=[
+    hint(current,TRACKING.linkedWeakScore,TRACKING.linkedWeakMargin,2,2,3),
+    hint(previous,TRACKING.linkedWeakScore,TRACKING.linkedWeakMargin,2,2,3),
+    hint(legacy,TRACKING.legacyWeakScore,TRACKING.legacyWeakMargin,2,3,4),
+  ].filter(Boolean);
+  const candidate=bestOf(weak);
+  if(!candidate)return null;
+  const identified=weak.filter(match=>match.id);
+  if(new Set(identified.map(match=>match.id)).size>1)return {kind:'observation',rotation:candidate.rotation,score:candidate.score,quality:'geometry',version:candidate.version};
+  const weakChoice=bestOf(identified)||candidate;
+  return {kind:'observation',rotation:weakChoice.rotation,score:weakChoice.score,quality:weakChoice.id?'weak':'geometry',version:weakChoice.version,...(weakChoice.id?{id:weakChoice.id}:{})};
 }
 export function matchPortal(pixels){
   const judged=judgePortal(pixels);

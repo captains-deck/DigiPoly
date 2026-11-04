@@ -1,6 +1,9 @@
 import {readFileSync} from 'node:fs';
 import {rgbaPng} from './png-fixture.mjs';
 import {markerPixels as legacyPixels} from '../src/marker-v2.mjs';
+import {markerPixels as v3Pixels,CODE_CELLS as v3Cells,CELL_SIZE as v3Cell,MARKER_SIZE as v3Size} from '../src/marker-v3.mjs';
+import {faviconSvg} from '../src/favicon-marker.mjs';
+import {monoPng} from '../scripts/png.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import cvModule from '../vendor/opencv.js';
@@ -16,7 +19,7 @@ function changeCell(pixels,size,index,value){const [cx,cy]=CODE_CELLS[index];for
 function scene(markers,{brightness=1,blur=0,occlude=false}={}){
   const gray=new cv.Mat(height,width,cv.CV_8UC1,new cv.Scalar(230)),rgba=new cv.Mat();
   for(const {id='DP-001',corners=square(),kind='portal'} of markers){
-    const size=kind==='reference'?reference.width:200,mono=kind==='reference'?Uint8Array.from({length:size*size},(_,i)=>reference.rgba[i*4]):kind==='legacy'?legacyPixels(size,id):markerPixels(size,id,{includeCode:kind!=='uncoded'});
+    const size=kind==='reference'?reference.width:200,mono=kind==='reference'?Uint8Array.from({length:size*size},(_,i)=>reference.rgba[i*4]):kind==='legacy'?legacyPixels(size,id):kind==='v3'?v3Pixels(size,id,{includeCode:kind!=='uncoded'}):markerPixels(size,id,{includeCode:kind!=='uncoded'});
     if(kind==='blank')mono.fill(0);
     if(kind==='noise')for(let i=0;i<mono.length;i++)mono[i]=((Math.floor(i/size/18)*7+Math.floor(i%size/18)*11)%5<2)?255:0;
     const src=cv.matFromArray(size,size,cv.CV_8UC1,mono),warped=new cv.Mat();
@@ -92,16 +95,28 @@ test('homography maps artwork corners exactly to the target quadrilateral',()=>{
 test('the supplied artwork itself decodes as DP-001 through rotations, perspective and lighting',()=>{
  for(let r=0;r<4;r++){const q=[{x:125,y:45},{x:345,y:75},{x:330,y:300},{x:110,y:255}],corners=q.map((_,i)=>q[(i+r)%4]);const out=detect([{kind:'reference',corners}],{brightness:.55,blur:3});assert.equal(out.length,1);assert.equal(out[0].id,'DP-001');assert.equal(out[0].version,3);for(let i=0;i<4;i++)assert.ok(Math.hypot(out[0].corners[i].x-corners[i].x,out[0].corners[i].y-corners[i].y)<5);}
 });
-test('vector reconstruction preserves the supplied design at its native resolution',()=>{
- const pixels=markerPixels(800),different=pixels.reduce((count,value,i)=>count+((value>127)!==(reference.rgba[i*4]>127)),0);assert.ok(1-different/pixels.length>.999,'More than 99.9% of black/white pixels should match the supplied design.');
+test('vector reconstruction preserves the supplied v3 design at its native resolution',()=>{
+ const pixels=v3Pixels(800),different=pixels.reduce((count,value,i)=>count+((value>127)!==(reference.rgba[i*4]>127)),0);assert.ok(1-different/pixels.length>.999,'More than 99.9% of black/white pixels should match the supplied design.');
 });
 test('new and legacy prints coexist, while duplicate IDs across versions are suppressed',()=>{
- const out=detect([{id:'DP-001',kind:'legacy',corners:square(60,90,170)},{id:'DP-002',corners:square(460,130,170)}]);assert.deepEqual(out.map(d=>[d.id,d.version]),[['DP-001',2],['DP-002',3]]);
- assert.deepEqual(detect([{id:'DP-001',kind:'legacy',corners:square(60,90,140)},{id:'DP-001',corners:square(330,90,140)}]),[]);
+ assert.deepEqual(detect([{id:'DP-001',kind:'legacy',corners:square(30,40,140)},{id:'DP-002',corners:square(420,160,180)}]).map(d=>[d.id,d.version]),[['DP-001',2],['DP-002',4]]);
+ assert.deepEqual(detect([{id:'DP-001',kind:'v3',corners:square(40,50,160)},{id:'DP-002',corners:square(430,170,180)}]).map(d=>[d.id,d.version]),[['DP-001',3],['DP-002',4]]);
+ assert.deepEqual(detect([{id:'DP-001',kind:'v3',corners:square(40,80,150)},{id:'DP-001',corners:square(360,80,150)}]),[]);
+ assert.deepEqual(detect([{id:'DP-002',kind:'legacy',corners:square(40,60,140)},{id:'DP-002',kind:'v3',corners:square(360,60,150)}]),[]);
 });
 
 test('published logo and print SVGs match the recognition geometry',()=>{
  for(const marker of MARKERS)for(const quiet of [0,100]){const file=`../assets/brand/${marker.slug}${quiet?'-print':''}.svg`;assert.equal(readFileSync(new URL(file,import.meta.url),'utf8'),markerSvg({id:marker.id,quiet}));}
  assert.equal(readFileSync(new URL('../assets/brand/portal-marker.svg',import.meta.url),'utf8'),markerSvg());
- assert.deepEqual(readFileSync(new URL('../assets/brand/portal-logo.png',import.meta.url)),readFileSync(new URL('./fixtures/portal-v3-reference.png',import.meta.url)));
+ assert.equal(readFileSync(new URL('../assets/brand/favicon.svg',import.meta.url),'utf8'),faviconSvg());
+ assert.notEqual(faviconSvg(),markerSvg());
+ assert.deepEqual(readFileSync(new URL('../assets/brand/portal-logo.png',import.meta.url)),monoPng(markerPixels(800),800));
+ assert.deepEqual(readFileSync(new URL('../assets/brand/portal-logo-v3.png',import.meta.url)),readFileSync(new URL('./fixtures/portal-v3-reference.png',import.meta.url)));
+});
+
+test('a damaged v3 code is still judged by the v3 cells',()=>{
+ const pixels=v3Pixels(NORMALIZED_SIZE,'DP-001');
+ const [cx,cy]=v3Cells[0];
+ for(let y=0;y<NORMALIZED_SIZE;y++)for(let x=0;x<NORMALIZED_SIZE;x++){const px=(x+.5)*v3Size/NORMALIZED_SIZE,py=(y+.5)*v3Size/NORMALIZED_SIZE;if(px>=cx&&px<cx+v3Cell&&py>=cy&&py<cy+v3Cell)pixels[y*NORMALIZED_SIZE+x]=0;}
+ assert.equal(matchPortal(pixels)?.id,'DP-001');assert.equal(matchPortal(pixels)?.version,3);
 });

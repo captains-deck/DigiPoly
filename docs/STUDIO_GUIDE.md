@@ -63,8 +63,8 @@ For the desktop route, use Live's **Copy OBS link** instead. That supplies a sta
 
 Use **Environment markers → + GhostMarker** to create or import an image target. Save to cloud and load it in the updated Live app; reference images travel with the workspace. Existing coded markers and OBS channel links keep working. See the [GhostMarker guide](GHOSTMARKER.md) for printing, tracking states and experimental limitations.
 
-## Updated linked-corner markers (0.7)
+## Readable linked-corner markers (0.8)
 
-The logo and DP-001 now use the interlocking-link artwork. DP-002 shares the central D and turns each inner corner link by 180 degrees to encode its separate ID. Download the updated sheets from **Print markers**. Existing v2 prints retain their original IDs and content assignments. Use one copy of each ID in view, including when mixing old and new print versions. New prints require Studio/Live 0.7 or later; GhostMarker targets are unaffected.
+The logo and DP-001 use the interlocking-link artwork, with larger corner blocks and a slightly wider central arrow so the mark reads at small sizes. DP-002 shares the central D and turns each inner corner link by 180 degrees. Download the updated sheets from **Print markers**. Existing v3 and v2 prints retain their original IDs and content assignments. Use one copy of each ID in view, including when mixing print versions. New v4 prints require Studio/Live 0.8 or later; GhostMarker targets are unaffected.
 
 Each placement shows **Tracking**, **Brief hold** or **Reacquiring**. Brief hold means the marker was confirmed and the overlay is bridging a short gap; assigned video keeps playing. A steady marker in the image can hold for about a third of a second. A moving sticker, or a fixed poster while the camera itself is moving, holds for about a seventh of a second. If the border is still visible but the ID cannot be read, the overlay can follow that border for a little over a second since the last clear read, then it lets go. Two copies of one ID, a conflicting ID, or a marker that leaves the frame clear the overlay instead of leaving artwork parked. OBS and clean outputs do not show these status words.
